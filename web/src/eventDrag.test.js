@@ -25,3 +25,18 @@ describe('useEventDrag', () => {
     expect(dropTarget('resize', { day: 1, min: 9999 }, item, 9, 19)).toEqual({ day: 1, from: 600, to: 1140 });
   });
 });
+
+describe('달력 한 시간 높이(11-15)', () => {
+  it('짧은 일정에도 글자가 보이게 늘리고, 배율은 하루 한 화면 ~ 160px 안', async () => {
+    const { autoHour, clampZoom, calPad } = await import('./components/WeekCalendar.jsx');
+    expect(autoHour({ fit: 30, need: 46, shortest: 1 })).toBe(46); // 한 시간 일정 = 두어 줄
+    expect(autoHour({ fit: 30, need: 46, shortest: 0.25 })).toBe(92); // 15분짜리도 0.5시간 몫으로
+    expect(autoHour({ fit: 60, need: 46, shortest: 1 })).toBe(60); // 화면이 넉넉하면 꽉 채움
+    expect(autoHour({ fit: 30, need: 46, shortest: 0.1 })).toBe(92);
+    expect(clampZoom(0.01, 46, 30) * 46).toBeCloseTo(30); // 하루 한 화면보다 작게는 안 됨
+    expect(clampZoom(10, 46, 30) * 46).toBeCloseTo(160);
+    expect(clampZoom(1, 46, 30)).toBe(1);
+    expect(calPad(3)).toBe(7);
+    expect(calPad(7)).toBe(14);
+  });
+});

@@ -4,7 +4,8 @@ import { dayLabel, hhmm } from '../time.js';
 
 // widget = 넓은 화면 '오늘' 쪽 위젯 칸(WidgetGrid의 widget('memo')): { slot, lifted, grip }
 // onTidy = '지금 정리' 창 열기(11-13 사람 피드백 10 · 15). 없으면 단추도 없다
-export default function MemoCard({ memos, now, activeId, waiting, widget = {}, onTidy }) {
+// onClear = 메모 모두 지우기(11-15 사람). 묻고 나서 부른다. 메모가 없으면 단추도 없다
+export default function MemoCard({ memos, now, activeId, waiting, widget = {}, onTidy, onClear }) {
   const logRef = useRef(null);
 
   useEffect(() => {
@@ -19,6 +20,11 @@ export default function MemoCard({ memos, now, activeId, waiting, widget = {}, o
       <div className="tasks-head">
         <h2 className="card-title">메모</h2>
         <span className="grow" />
+        {onClear && memos.length > 0 && (
+          <button type="button" className="btn-text" onClick={() => window.confirm('메모를 모두 지울까요? 되돌릴 수 없어요. 메모로 넣은 일정·할 일은 그대로 남아요.') && onClear()}>
+            모두 지우기
+          </button>
+        )}
         {onTidy && (
           <button type="button" className="btn-text" onClick={onTidy}>
             지금 정리

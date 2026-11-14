@@ -1,11 +1,10 @@
 // 달력 일정 끌기(11-14 피드백 '일정을 손으로 조작해서 위치, 길이 조절', 모양은 request1113.css ③ 그림자 칸).
 // 몸통을 끌면 옮기기(길이 그대로, 다른 날 칸으로도), 아래 끝 손잡이를 끌면 길이 바꾸기. 15분 눈금.
-// 마우스는 4px 넘게 움직이면 끌기. 손가락은 몸통을 0.4초 길게 누른 뒤(그 전에 움직이면 그냥 굴리기), 손잡이는 바로.
+// 고른 일정에서만 부른다(WeekCalendar: 한 번 누르면 고르기, 11-15). 4px 넘게 움직이면 끌기(마우스·손가락 같음).
 // 놓으면 onDrop(ev, { day, from, to }) — day = 보이는 날 칸 번호, from·to = 그날 0시부터 분.
 import { useEffect, useRef, useState } from 'react';
 
 export const SNAP = 15;
-const HOLD_MS = 400;
 
 // 손 위치 → 칸 번호와 분(눈금 맞추기 전). box = 날 칸들 전체의 화면 자리, first·last = 맨 위·맨 아래 시각(시)
 export function pointAt(x, y, box, n, first, last) {
@@ -36,7 +35,6 @@ export default function useEventDrag({ cols, n, first, last, onDrop }) {
   const stop = () => {
     const s = st.current;
     if (!s) return;
-    clearTimeout(s.timer);
     window.removeEventListener('pointermove', s.move);
     window.removeEventListener('pointerup', s.up);
     window.removeEventListener('pointercancel', s.cancel);
@@ -55,7 +53,6 @@ export default function useEventDrag({ cols, n, first, last, onDrop }) {
     const box = { left: a.left, top: a.top, width: b.right - a.left, height: a.height };
     const at0 = pointAt(e.clientX, e.clientY, box, n, first, last);
     const s = { item: { ...item, grab: at0.min - item.from }, mode, box, x0: e.clientX, y0: e.clientY, on: false, last: null };
-    const touch = e.pointerType !== 'mouse';
     const activate = () => {
       s.on = true;
       navigator.vibrate?.(8);
@@ -64,11 +61,7 @@ export default function useEventDrag({ cols, n, first, last, onDrop }) {
     s.move = (m) => {
       const far = Math.hypot(m.clientX - s.x0, m.clientY - s.y0);
       if (!s.on) {
-        if (touch && mode === 'move') {
-          if (far > 8) stop(); // 길게 누르기 전에 움직였다 = 굴리기
-          return;
-        }
-        if (far < (touch ? 2 : 4)) return;
+        if (far < 4) return;
         activate();
       }
       s.last = dropTarget(mode, pointAt(m.clientX, m.clientY, s.box, n, first, last), s.item, first, last);
@@ -88,7 +81,6 @@ export default function useEventDrag({ cols, n, first, last, onDrop }) {
     window.addEventListener('pointerup', s.up);
     window.addEventListener('pointercancel', s.cancel);
     window.addEventListener('touchmove', s.block, { passive: false });
-    if (touch && mode === 'move') s.timer = setTimeout(activate, HOLD_MS);
     st.current = s;
   }
 

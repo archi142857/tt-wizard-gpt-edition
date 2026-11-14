@@ -24,6 +24,7 @@
 //                                 also = [{ title, minutes }] 같은 메모의 나머지 할 일(마감은 같게, ext_id 'memo:<id>:2' …), tasks = 넣은 할 일 모두
 //   POST   /api/memo/:id/cancel   { kind? }                   → { ok }            일정 팝업 취소: 메모는 남아서 밤 정리가 읽는다. 할 일 팝업 취소: 메모로만(handled = 1)
 //   DELETE /api/memo/:id                                      → { ok }
+//   DELETE /api/memo           { confirm: true }           → { ok, deleted }   메모 모두 지우기(11-15 사람). 메모로 만든 일정·할 일은 그대로
 //
 // 할 일 popup 모양: { kind: "task", title, date: 마감 날짜 또는 "?", time: 마감 시각 또는 "?", minutes?: 어림한 분, also?: [{ title, minutes }], by }
 //   (11-12 사람 "여러 개 한 메모에 적으면 분리해서 넣게") 이름 오타는 AI가 고친다. AI가 없으면 쉼표로만 나눈다
@@ -48,6 +49,7 @@ export async function handle(request, env, ctx, user) {
   if (id && action === "save" && request.method === "POST") return savePopup(request, env, ctx, user, id);
   if (id && action === "cancel" && request.method === "POST") return cancelPopup(request, env, ctx, user, id);
   if (id && !action && request.method === "DELETE") return deleteMemo(env, user, id);
+  if (!id && request.method === "DELETE") return deleteAllMemos(request, env, user);
   return json({ error: "없는 주소" }, 404);
 }
 
@@ -192,6 +194,13 @@ async function cancelPopup(request, env, ctx, user, memoId) {
 async function deleteMemo(env, user, memoId) {
   const r = await env.DB.prepare("DELETE FROM memos WHERE id = ? AND user_id = ?").bind(memoId, user.id).run();
   return r.meta.changes ? json({ ok: true }) : json({ error: "없는 메모" }, 404);
+}
+
+async function deleteAllMemos(request, env, user) {
+  const body = await request.json().catch(() => null);
+  if (!body || body.confirm !== true) return json({ error: "정말 지우려면 confirm: true를 보내 주세요" }, 400);
+  const r = await env.DB.prepare("DELETE FROM memos WHERE user_id = ?").bind(user.id).run();
+  return json({ ok: true, deleted: r.meta.changes });
 }
 
 // ── 팝업 후보 만들기 ─────────────────────────────────────────

@@ -321,6 +321,16 @@ export function listMemos() {
   return ex ? reply({ memos: ex.memos }) : call('GET', '/api/memo?limit=50');
 }
 
+// 메모 모두 지우기(11-15 사람) → { ok, deleted }. 메모로 만든 일정·할 일은 남는다
+export function clearMemos() {
+  if (ex) {
+    const deleted = ex.memos.length;
+    ex.memos = [];
+    return reply({ ok: true, deleted });
+  }
+  return call('DELETE', '/api/memo', { confirm: true });
+}
+
 // 메모 하나를 보내고, 일정처럼 보이면 popup { title, date, time, end_time, place, by },
 // 할 일처럼 보이면 popup { kind: 'task', title, date, time, minutes?, also?, by }(마감, 모르면 '?')를 받는다. AI 때문에 2.5초까지 걸릴 수 있다.
 export function sendMemo(text) {

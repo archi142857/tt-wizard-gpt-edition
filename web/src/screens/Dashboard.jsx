@@ -37,7 +37,7 @@ import TodayView from '../components/TodayView.jsx';
 import WidgetGrid from '../components/WidgetGrid.jsx';
 import { DEFAULT_ORDER, FIRST, LAYOUTS, readLayout, swapOrder, writeLayout } from '../todayLayout.js';
 import TtwSheet from '../components/TtwSheet.jsx';
-import WeekCalendar from '../components/WeekCalendar.jsx';
+import WeekCalendar, { calPad } from '../components/WeekCalendar.jsx';
 import { useThemeName } from '../themeName.js';
 import { PARTICLE, applyTheme } from '../themes.js';
 import { PLAN_DAYS, dateKey, eventOnlyDay, fromServerPlan, planDensity } from '../density.js';
@@ -245,7 +245,11 @@ export default function Dashboard({ example, installPrompt, ttwLink, joinCode, o
     if (weekFrom === lastToday) setWeekFrom(today);
   }
 
-  const calRange = useMemo(() => (calDays ? [weekFrom, calDays] : [monthGrid(month.y, month.m)[0].toISOString(), 42]), [calMode, weekFrom, month]);
+  // 주간 달력은 보이는 날 앞뒤로 calPad일씩 더 불러 둔다(좌우로 굴려 볼 몫, 11-15)
+  const calRange = useMemo(
+    () => (calDays ? [addDays(weekFrom, -calPad(calDays)).toISOString(), calDays + 2 * calPad(calDays)] : [monthGrid(month.y, month.m)[0].toISOString(), 42]),
+    [calMode, weekFrom, month], // eslint-disable-line react-hooks/exhaustive-deps
+  );
 
   const loadPlan = useCallback(
     () =>
@@ -569,7 +573,15 @@ export default function Dashboard({ example, installPrompt, ttwLink, joinCode, o
     const p = kst(new Date(m.created_at));
     return p.h * 60 + p.min;
   });
-  const memoCard = <MemoCard memos={memos} now={now} activeId={popup?.memoId} waiting={waiting} onTidy={() => setSheet('tidy')} />;
+  const clearMemos = () =>
+    api
+      .clearMemos()
+      .then(({ deleted }) => {
+        setMemos([]);
+        setSnack({ text: `메모 ${deleted}개를 지웠어요` });
+      })
+      .catch(() => setSnack({ text: '메모를 지우지 못했어요' }));
+  const memoCard = <MemoCard memos={memos} now={now} activeId={popup?.memoId} waiting={waiting} onTidy={() => setSheet('tidy')} onClear={clearMemos} />;
 
   // 메모 칸에 'M/D '(일정) 또는 'M/D까지 '(할 일)를 적어 두고 초점 — 나머지는 사람이 적고 보내면 메모 → 팝업 → 저장
   const calDay = calDays && weekFrom !== today ? weekFrom : today;
@@ -760,7 +772,7 @@ export default function Dashboard({ example, installPrompt, ttwLink, joinCode, o
                 editing={arranging}
                 layoutKey={todayLayout.layout}
               />
-              <MemoCard memos={memos} now={now} activeId={popup?.memoId} waiting={waiting} widget={widget('memo')} onTidy={() => setSheet('tidy')} />
+              <MemoCard memos={memos} now={now} activeId={popup?.memoId} waiting={waiting} widget={widget('memo')} onTidy={() => setSheet('tidy')} onClear={clearMemos} />
                 </>
               )}
             </WidgetGrid>
@@ -775,8 +787,7 @@ export default function Dashboard({ example, installPrompt, ttwLink, joinCode, o
                 now={now}
                 density={densityOf}
                 isCurrent={weekFrom === today}
-                onPrev={() => setWeekFrom(addDays(weekFrom, -calDays).toISOString())}
-                onNext={() => setWeekFrom(addDays(weekFrom, calDays).toISOString())}
+                onMove={(k) => setWeekFrom((w) => addDays(w, k).toISOString())}
                 onToday={() => setWeekFrom(today)}
                 onEvent={(event) => setSheet({ event })}
                 onTask={(task) => setSheet({ task })}

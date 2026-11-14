@@ -74,7 +74,7 @@ svg.backdrop.staff { opacity: 0.3; } /* 흰 종이 위 검은 띠는 특히 세�
 
 /* ── D5 · D6 달력 손조작: 빈 칸을 누르면 그 시각에 넣기, 아래 끝 손잡이를 끌어 길이 바꾸기 ── */
 .cal-grid .col { cursor: copy; }
-.cal-grid .ev { cursor: grab; touch-action: pan-y; }
+.cal-grid .ev { cursor: pointer; touch-action: pan-x pan-y; } /* 11-15: 고른 일정만 끌린다(아래 '11-15 달력') */
 .cal-grid .ev-grip { position: absolute; left: 0; right: 0; bottom: 0; height: 10px; cursor: ns-resize; touch-action: none; }
 .cal-grid .ev-grip::after { content: ''; position: absolute; left: 50%; bottom: 2px; width: 16px; height: 3px; margin-left: -8px; border-radius: 2px; background: currentColor; opacity: 0; transition: opacity 0.15s; }
 .cal-grid .ev:hover .ev-grip::after, .cal-grid .ev:focus-visible .ev-grip::after { opacity: 0.45; }
@@ -85,3 +85,26 @@ svg.backdrop.staff { opacity: 0.3; } /* 흰 종이 위 검은 띠는 특히 세�
   html .shell .composer form,
   html[data-theme] .shell .composer form { width: min(100%, 460px); max-width: none; margin: 0 0 0 auto; }
 }
+
+/* ── 11-15 달력: 좌우는 굴리기(노션 캘린더처럼), 위아래는 일정 글자가 보이는 높이 + 두 손가락 확대, 일정은 눌러 고른 뒤에만 끌기 ──
+   WeekCalendar가 보이는 날 앞뒤로 더 그려 두고(--total) 한 칸 너비를 화면의 1/--n로 맞춘다. 날짜 줄은 위에, 시간 축은 왼쪽에 붙어 있다. */
+.cal { --axis: 24px; }
+@media (min-width: 1024px) { .cal { --axis: 44px; } }
+.cal-scroll.x { overflow: auto; scroll-snap-type: x mandatory; scroll-padding-left: var(--axis); overscroll-behavior: contain; container-type: inline-size; --ev-need: 46px; }
+html:is([data-theme='뉴모피즘'], [data-theme^='입자']) .cal-scroll.x { --ev-need: 52px; } /* 둥근 칸·시각 줄로 글 둘레가 넓다 */
+.cal-scroll.x :is(.cal-days, .cal-top, .cal-grid) { --colw: calc((100cqw - var(--axis)) / var(--n)); grid-template-columns: var(--axis) repeat(var(--total), var(--colw)); width: max-content; }
+.cal-scroll.x .cal-grid .hline { left: var(--axis); }
+.cal-scroll.x .cal-grid > .col { scroll-snap-align: start; overflow: clip; } /* 화면 밖 날의 일정 그림자가 가장자리에 줄처럼 비치지 않게 */
+/* 붙어 있는 머리·축은 밑으로 지나가는 일정이 비치지 않게 칠한다(반투명 카드 테마는 바탕색을 깐다) */
+.cal-stick, .cal-stick .axis-label, .cal-grid > .hours { background: linear-gradient(var(--card), var(--card)), var(--bg); }
+html[data-theme^='입자'] :is(.cal-stick, .cal-stick .axis-label, .cal-grid > .hours) { background: var(--bg); } /* 입자는 카드가 투명 */
+.cal-stick { position: sticky; top: 0; z-index: 4; width: max-content; }
+.cal-stick .axis-label, .cal-grid > .hours { position: sticky; left: 0; z-index: 3; align-self: stretch; display: flex; align-items: center; }
+.cal-grid > .hours { display: block; }
+.cal-grid .ev.selected { touch-action: none; cursor: grab; outline: 2px solid var(--accent); outline-offset: -2px; z-index: 3; }
+.cal-sel-hint { margin: 0 2px 4px; font-size: 12px; line-height: 16px; color: var(--text3); }
+/* 일정 글은 칸 맨 위부터(단추는 글을 가운데로 내려 긴 일정은 글이 칸 가운데에 있었다), 표시(점·네모·♩)는 글 옆에 — 글이 표시 아래로 밀려 안 보이던 것도 막는다(11-15) */
+.cal-grid .ev { display: flex; flex-wrap: wrap; align-content: flex-start; align-items: flex-start; }
+.cal-grid .ev::before { flex: none; margin-top: max(0px, calc((var(--ev-lh) - 7px) / 2)); }
+.cal-grid .ev > .ev-t { flex: 1 1 50%; min-width: 0; } /* 50%: 표시 옆에 놓이고, 밑의 시각·장소 줄(100%)은 다음 줄로 */
+.cal-grid .ev > .place { flex: 0 0 100%; min-width: 0; }

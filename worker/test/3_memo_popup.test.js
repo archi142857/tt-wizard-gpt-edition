@@ -372,6 +372,22 @@ test("메모 쓰기 → 목록 → 팝업 저장 → 일정 생김 → 고쳐 �
   assert.equal((await call(env, user, "DELETE", `/api/memo/${memo.id}`)).status, 404);
 });
 
+test("메모 모두 지우기: confirm 없으면 400, 내 메모만 지우고 메모로 만든 일정은 남는다", async () => {
+  const DB = fakeD1();
+  const env = { DB };
+  const user = addUser(DB, { email: "a@example.com", googleSub: "a" });
+  const other = addUser(DB, { email: "b@example.com", googleSub: "b" });
+  for (const text of ["장보기", "생각 하나"]) await call(env, user, "POST", "/api/memo", { text });
+  await call(env, other, "POST", "/api/memo", { text: "남의 메모" });
+  DB.sqlite.prepare("INSERT INTO events (user_id, title, start, source, ext_id) VALUES (?, '예시 일정', '2026-11-20T10:00:00+09:00', 'memo', 'memo:1')").run(user.id);
+  assert.equal((await call(env, user, "DELETE", "/api/memo")).status, 400);
+  const r = await call(env, user, "DELETE", "/api/memo", { confirm: true });
+  assert.deepEqual(r.body, { ok: true, deleted: 2 });
+  assert.equal((await call(env, user, "GET", "/api/memo")).body.memos.length, 0);
+  assert.equal((await call(env, other, "GET", "/api/memo")).body.memos.length, 1);
+  assert.equal(DB.sqlite.prepare("SELECT count(*) AS n FROM events").get().n, 1);
+});
+
 test("시각 없이 저장하면 종일 일정(날짜만), 취소는 log만 남기고 메모는 그대로", async () => {
   const DB = fakeD1();
   const env = { DB };

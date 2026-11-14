@@ -37,10 +37,10 @@ export function addDays(date, n) {
   return new Date(new Date(date).getTime() + n * DAY);
 }
 
-// 주의 시작(weekStart)부터 며칠째인지. 그 주 밖이면 -1
-export function dayIndex(start, dateOrIso) {
+// 주의 시작(weekStart)부터 며칠째인지. 그 주(n일, 기본 7) 밖이면 -1
+export function dayIndex(start, dateOrIso, n = 7) {
   const i = Math.floor((new Date(dateOrIso) - new Date(start)) / DAY);
-  return i >= 0 && i < 7 ? i : -1;
+  return i >= 0 && i < n ? i : -1;
 }
 
 // 끝을 정하지 않은 일정·메모는 1시간으로 본다(11-13 사람 "끝나는 시간을 따로 정하지 않았으면 1시간을 기본으로").
